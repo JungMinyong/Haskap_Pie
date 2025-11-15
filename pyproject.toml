@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "Haskap_Pie"
+version = "1.0.0"
+description = "Haskap Pie: A Halo finding Algorithm with efficient Sampling, K-means clustering, tree-Assembly,
+Particle tracking, Python modules, Inter-code applicability, and Energy solving"
+authors = [
+    { name="Kirk Barrow", email="kbarrow@illinois.edu" }
+]
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT License" }
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+]
+dependencies = [
+    "numpy",
+    "pandas",
+    "yt>=4.2",
+    "scipy",
+    "matplotlib",
+    "scikit-learn",
+    "opencv",
+    "healpy",
+    "natsort",
+    "mpi4py",
+
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/ksbarrow/Haskap_Pie"
+"Source" = "https://github.com/ksbarrow/Haskap_Pie"
+"Bug Tracker" = "https://github.com/ksbarrow/Haskap_Pie/issues"
+
+[tool.pytest.ini_options]
+addopts = "--cov=Haskap_Pie"

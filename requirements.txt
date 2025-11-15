@@ -1,0 +1,10 @@
+numpy
+pandas
+yt>=4.2
+scipy
+matplotlib
+scikit-learn
+opencv
+healpy
+natsort
+mpi4py
