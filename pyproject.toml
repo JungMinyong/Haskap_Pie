@@ -27,7 +27,7 @@ dependencies = [
     "scipy",
     "matplotlib",
     "scikit-learn",
-    "opencv",
+    "opencv-python",
     "healpy",
     "natsort",
     "mpi4py",

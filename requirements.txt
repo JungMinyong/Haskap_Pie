@@ -4,7 +4,7 @@ yt>=4.2
 scipy
 matplotlib
 scikit-learn
-opencv
+opencv-python
 healpy
 natsort
 mpi4py
