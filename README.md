@@ -83,7 +83,7 @@ To run Haskap Pie, use the example bash file `haskap.sh` in the following way fr
 Inside `haskap.sh` you will find an mpirun command. The 'X' will have to be replaced with the number of threads.
 
 ```
-bash run_haskap.py /path/to/sims/box1 code_type /path/to/save/ num_skip
+bash haskap.sh /path/to/sims/box1 code_type /path/to/save/ num_skip
 ```
 
 where `code_tp` is the code type as mentioned above and `num_skip` is the number of snapshots to skip.
@@ -91,7 +91,7 @@ where `code_tp` is the code type as mentioned above and `num_skip` is the number
 To run on a High Performance Cluster with slurm scheduling, we provide `haskap_HPC.sh`. To run this, follow the same directory structure as above and use the following command:
 
 ```
-sbatch run_haskap.py /path/to/sims/box1 code_type /path/to/save/ num_skip
+sbatch haskap_HPC.sh /path/to/sims/box1 code_type /path/to/save/ num_skip
 ```
 
 changing the required account settings as needed.
