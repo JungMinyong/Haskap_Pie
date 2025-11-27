@@ -10,7 +10,7 @@ When using this code, please cite the following papers:
 Haskap Pie: Barrow, Nguyen, & Scrabacz 2025, ApJ, [Edition], [Article], [Link] \
 Haskap Pie II: Barrow, Nguyen, & Scrabacz 2025, ApJ, In Prep
 
-A draft of Haskap Pie I is available [here](Haskap_Pie_Paper_Draft.pdf) or on the [arXiv](https://arxiv.org/abs/2505.22709)
+A draft of Haskap Pie I is available [here](Haskap_Pie_Paper_Draft.pdf) (most recent) or on the [arXiv](https://arxiv.org/abs/2505.22709)
 
 ## Installation
 
