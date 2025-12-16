@@ -1,10 +1,9 @@
-from haskap.haskap import Evolve_Tree, ensure_dir, minmass_calc
+from haskap.haskap import Evolve_Tree, ensure_dir, minmass_calc, resave_particles
 from haskap.make_pfs_allsnaps import make_pfs_allsnaps
 import sys, os
 import yt
 import gc
 import numpy as np
-
 
 yt.enable_parallelism()
 gc.enable()
@@ -16,9 +15,9 @@ rank = comm.rank
 nprocs = comm.size
 
 if len(sys.argv) !=5:
-        if rank==0:
-            print(sys.argv)
-            print('Need simulation file path and code type to run as well as whether to pre-run refined region, ex: python shinbad.py simulation/folder/path ENZO save/path skip_number')
+    if rank==0:
+        print(sys.argv)
+        print('Need simulation file path and code type to run as well as whether to pre-run refined region, ex: python shinbad.py simulation/folder/path ENZO save/path skip_number')
 else:
     string = sys.argv[1]
     code = sys.argv[2]
@@ -52,8 +51,8 @@ else:
     END = False
     path = string
     find_dm = True
-    find_stars = True
-    resave = False
+    find_stars = False
+    resave = False # recommended to turn on for particle-based codes (GEAR, GIZMO, CHANGA, GAGDET3) due to potential loading issue with yt
     last_timestep = len(fld_list) - 1
     if fake:
         find_stars = False
@@ -65,13 +64,10 @@ else:
         print('Save iteration: ',fldn)
         #minmass_calc(code)
     #refined = False
-    if code == 'GEAR' or code == 'GIZMO' or code == 'CHANGA' or code == 'GADGET3':# or code == 'ENZO':
-            resave = True
-    # if resave:
-    #     resave_particles()
+    if resave:
+        resave_particles()
     Evolve_Tree(plot=False,codetp=code,skip_large=False,verbose=False,\
-        from_tree=False,last_timestep=last_timestep,multitree=True,refined=refined,video=True,trackbig=False,tracktime=True)
+        from_tree=False,last_timestep=last_timestep,multitree=True,refined=refined,video=False,trackbig=False,tracktime=True)
     if organize_files and rank==0:
         tmp_folder = savestring+'/tmp_files/'
         os.system('rm -r %s' % tmp_folder)
-
