@@ -39,10 +39,6 @@ cd ..
 
 To ensure it has installed correctly, run either `pip list` or `pip freeze` to ensure it is in the list of installed packages.
 
-Using pip, Haskap Pie can be installed from PyPI with the following:
-```
-pip install haskap
-```
 
 We recommend using git, as it will contain the most recent version of Haskap Pie.
 
