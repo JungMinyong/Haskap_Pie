@@ -45,7 +45,7 @@ We recommend using git, as it will contain the most recent version of Haskap Pie
 
 Haskap Pie can be used on both on an individual machine or a High Performance Computing (HPC) cluster. In [examples](examples/), there are example bash files to run Haskap Pie.
 
-Dependencies should be installed with this package, but are also listed in [requirements.txt](requirements.txt)
+Dependencies should be installed with this package. Haskap Pie also needs a minimum of 5 timesteps/snapshots of the simulation you are attemping to run it on.
 
 To run Haskap Pie, your simulation must be one of the following codes:
 
