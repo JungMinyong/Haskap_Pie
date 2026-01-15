@@ -26,7 +26,6 @@ python --version
 
 Ensure that the version is greater than or equal to python 3.12.
 
-Then, Haskap Pie can be installed in two ways.
 
 Using git, Haskap Pie can be installed with the following:
 ```
