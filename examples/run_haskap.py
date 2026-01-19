@@ -7060,7 +7060,8 @@ def more_var_maker(pos,mass,vel,rvir,esr,es,estep_f,hull,com2,self_lu,self_kg_su
     eigvals *= (len(weighted_pos))
     a = max(eigvals)
     b = min(eigvals)
-    c = eigvals[(eigvals!=a)*(eigvals!=b)][0]
+    bool_inter = (eigvals!=a)*(eigvals!=b)
+    c = eigvals[bool_inter][0]
     a,b,c = np.sqrt(a),np.sqrt(b),np.sqrt(c)
     dist_com_1 = np.linalg.norm(center_of_mass-center_of_energy)/rvir
     dist_com_2 = np.linalg.norm(center_of_mass-com2)/rvir
@@ -7080,7 +7081,7 @@ def more_var_maker(pos,mass,vel,rvir,esr,es,estep_f,hull,com2,self_lu,self_kg_su
     a_vec *= axis_factor
     b_vec = eigvecs[eigvals == min(eigvals)][0]/np.linalg.norm(eigvecs[eigvals == min(eigvals)][0])
     b_vec *= axis_factor*b/a
-    c_vec = eigvecs[(eigvals!=a)*(eigvals!=b)][0]/np.linalg.norm(eigvecs[(eigvals!=a)*(eigvals!=b)][0])
+    c_vec = eigvecs[bool_inter][0]/np.linalg.norm(eigvecs[bool_inter][0])
     c_vec *= axis_factor*c/a
     bound_mass = mass[esr<0].sum()*self_kg_sun
     more_variables_i = [dist_com_3,dist_com_1,dist_com_2,com_r/self_lu,coe_r/self_lu,half_width/self_lu,sphericity,1-mass_frac,\
@@ -7105,7 +7106,7 @@ if __name__ == "__main__":
         fake = False
         if rank==0:
             print(string,code,savestring,skip)
-        fldn = 2013
+        fldn = 2014
         if fake:
             fldn = 1948
         organize_files = False
