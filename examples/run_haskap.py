@@ -61,7 +61,7 @@ class Evolve_Tree():
         self.tracktime = tracktime
         self.optimization = False
         self.plot_width = 4
-        self.all_times = np.arange(timestep+1)[::-1][::skip]
+        self.all_times = np.arange(len(fld_list))[::-1][::skip]
         self.track_mem = track_mem
         self.traceback = False
         # print(self.all_times)
@@ -97,6 +97,8 @@ class Evolve_Tree():
         self.new_halo = 0
         self.minmass = 1e20
         self.ll_all,self.ur_all = {},{}
+        if refined:
+            self.ll_all,self.ur_all = self.make_region_list()
         self.maxids = 4000
         self.compare = False
         self.time0 = time_sys.time()
@@ -475,8 +477,6 @@ class Evolve_Tree():
                            for l in b.traceback.format():
                                print(l)
         if make_tree:
-                if refined:
-                    self.ll_all,self.ur_all = self.make_region_list()
                     # if rank ==0:
                     #     print(self.ll_all)
                 self.plot = False
@@ -7106,7 +7106,7 @@ if __name__ == "__main__":
         fake = False
         if rank==0:
             print(string,code,savestring,skip)
-        fldn = 2014
+        fldn = 2017
         if fake:
             fldn = 1948
         organize_files = False
