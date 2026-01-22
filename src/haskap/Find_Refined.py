@@ -15,6 +15,7 @@ class Find_Refined():
     """
     This class returns the refined region of a simulation snapshot.
     The refined region is defined as the region that contains the smallest DM mass and some allowance on the second smallest DM mass.
+    For ENZO, an optional mode can instead return the bounding box of particle_type == 4 only.
 
     Parameters
     ----------
@@ -31,17 +32,21 @@ class Find_Refined():
         The index of the minimum DM mass that we want to include in the refined region.
         The default value is 0, meaning that we will include the smallest mass and some allowance on the second smallest mass.
         If the value is 1, we will include the second smallest mass and some allowance on the third smallest mass, and so on.
+    enzo_type4_only : bool (default = False)
+        If True and codetp == 'ENZO', ignore particle masses and return the bounding box
+        that encloses particle_type == 4 only.
 
     Returns
     -------
     self.refined_region : np.array() (2x3)
         The coordinates of the refined region. The first element is the lower-left corner, and the second element is the upper-right corner.
     """
-    def __init__(self, codetp, fld_list, timestep, savestring, lim_index = 0):
+    def __init__(self, codetp, fld_list, timestep, savestring, lim_index = 0, enzo_type4_only = False):
         self.codetp = codetp
         self.lim_index = lim_index
         self.savestring = savestring
         self.timestep = timestep
+        self.enzo_type4_only = bool(enzo_type4_only) and self.codetp == 'ENZO'
         if not os.path.exists(self.savestring + '/' + 'refined_region_%s.npy' % (self.timestep)):
             self.open_ds(fld_list)
             self.find_refined_region()
@@ -78,6 +83,46 @@ class Find_Refined():
         if self.codetp == 'AREPO' or self.codetp == 'GIZMO':
             dm = ParticleUnion("DarkMatter",["PartType2","PartType1"])
             self.ds.add_particle_union(dm)
+
+    def _enzo_type4_positions(self, reg):
+        part_type = reg[("all","particle_type")].v.astype(np.int64)
+        pos = reg[("all","particle_position")].to("code_length").v
+        return pos[part_type == 4]
+
+    def _reduce_range_enzo_type4(self, numsegs = 10):
+        ll_all = self.ds.domain_left_edge.to('code_length').v
+        ur_all = self.ds.domain_right_edge.to('code_length').v
+        xx,yy,zz = np.meshgrid(np.linspace(ll_all[0],ur_all[0],numsegs),\
+                    np.linspace(ll_all[1],ur_all[1],numsegs),np.linspace(ll_all[2],ur_all[2],numsegs))
+        _,segdist = np.linspace(ll_all[0],ur_all[0],numsegs,retstep=True)
+        ll = np.concatenate((xx[:-1,:-1,:-1,np.newaxis],yy[:-1,:-1,:-1,np.newaxis],zz[:-1,:-1,:-1,np.newaxis]),axis=3) #ll is lowerleft
+        ur = np.concatenate((xx[1:,1:,1:,np.newaxis],yy[1:,1:,1:,np.newaxis],zz[1:,1:,1:,np.newaxis]),axis=3) #ur is upperright
+        ll = np.reshape(ll,(ll.shape[0]*ll.shape[1]*ll.shape[2],3))
+        ur = np.reshape(ur,(ur.shape[0]*ur.shape[1]*ur.shape[2],3))
+        jobs,sto = self.job_scheduler_ref(np.arange(len(ll)))
+        ll_reduced = np.array([np.inf, np.inf, np.inf])
+        ur_reduced = np.array([-np.inf, -np.inf, -np.inf])
+        found = False
+        ranks = np.arange(nprocs)
+        for rank_now in ranks:
+            if rank == rank_now:
+                for i in jobs[rank]:
+                    buffer = (segdist/100)
+                    reg = self.ds.box(ll[i] - buffer ,ur[i] + buffer)
+                    pos = self._enzo_type4_positions(reg)
+                    if len(pos) > 0:
+                        sto[i]["ll"] = pos.min(axis=0)
+                        sto[i]["ur"] = pos.max(axis=0)
+        for rank_now in ranks:
+            for t in jobs[rank_now]:
+                sto[t] = comm.bcast(sto[t], root=rank_now)
+                if "ll" in sto[t]:
+                    ll_reduced = np.minimum(ll_reduced, sto[t]["ll"])
+                    ur_reduced = np.maximum(ur_reduced, sto[t]["ur"])
+                    found = True
+        if not found:
+            raise ValueError("No ENZO particle_type == 4 particles found for refined region.")
+        return np.vstack((ll_reduced, ur_reduced))
 
     def job_scheduler_ref(self,out_list):
         '''
@@ -345,6 +390,12 @@ class Find_Refined():
             numsegs = 10
         else:
             numsegs = int(np.ceil((nprocs*5)**(1/3)) + 1)
+        if self.enzo_type4_only:
+            self.refined_region = self._reduce_range_enzo_type4(numsegs)
+            del self.ds
+            if yt.is_root():
+                np.save(self.savestring + '/' + 'refined_region_%s.npy' % (self.timestep),self.refined_region)
+            return
         reduced_region = self.reduce_range(numsegs)
         # if yt.is_root():
         #     #print(reduced_region)

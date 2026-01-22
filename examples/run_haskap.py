@@ -1345,7 +1345,7 @@ class Evolve_Tree():
             #if (len_now%self.interval ==0 or times == max(all_times)) and times >0:
             region_list.append(times)
             if not os.path.exists(savestring + '/' + 'Refined/'+ 'refined_region_%s.npy' % (times)):
-                    fr = Find_Refined(code, fld_list, times, savestring + '/' + 'Refined')
+                    fr = Find_Refined(code, fld_list, times, savestring + '/' + 'Refined', enzo_type4_only = enzo_type4_only)
         region_list = comm.bcast(region_list,root=0)
         region_list.sort()
         region_list = np.array(region_list)
@@ -6713,7 +6713,7 @@ def make_refined():
         if (len_now%interval ==0 or times == last_timestep) and times >0:
             refined_region = None
             if not os.path.exists(savestring + '/' + 'Refined/' + 'refined_region_%s.npy' % (times)):
-                    fr = Find_Refined(code, fld_list, times, savestring + '/' + 'Refined')
+                    fr = Find_Refined(code, fld_list, times, savestring + '/' + 'Refined', enzo_type4_only = enzo_type4_only)
                     refined_region = fr.refined_region
                     # if rank==0:
                     #     #print(refined_region)
@@ -7132,6 +7132,7 @@ if __name__ == "__main__":
         path = string
         find_dm = True
         find_stars = False
+        enzo_type4_only = True
         resave = False # recommended to turn on for particle-based codes (GEAR, GIZMO, CHANGA, GAGDET3) due to potential loading issue with yt
         last_timestep = len(fld_list) - 1
         if fake:
