@@ -5104,7 +5104,7 @@ class Over_Density_Finder():
                     rads = np.array([])
                     massl = np.array([])
                     mass = np.array([])
-                    self.minmass = 0
+                    self.minmass = minmass*5
                     #minmass_rat = max(300/self.denl,2)
                     if self.start:
                         interval = min(30,interval)*1j
@@ -6125,7 +6125,7 @@ def make_filter_star(ds_now, codetp, manual=None):
     return ds_now
 
 
-def pickup_particles(reg,codetp,stars=True,vel_ids=True):
+def pickup_particles(reg,codetp,stars=True,vel_ids=True,find_dm=True):
     # 'nbody'
     if codetp == 'ENZO':
         mass_all = reg[('all','particle_mass')].in_units('Msun')
@@ -6208,15 +6208,15 @@ def pickup_particles(reg,codetp,stars=True,vel_ids=True):
             return mass.in_units('kg').v,pos
 
 def pickup_min_dm(ll,ur,codetp,ds,floormass=100):
-    if resave:
-        mass,pos = pickup_particles_backup(last_timestep,ll,ur,ds,vel_ids=False,stars=False)
-        pos = None
-        lenmass = len(mass)
-        if len(mass) >0:
-            mass = mass[mass >floormass].min()
-        else:
-            mass = 1e99
-    else:
+    # if resave:
+    #     mass,pos = pickup_particles_backup(last_timestep,ll,ur,ds,vel_ids=False,stars=False)
+    #     pos = None
+    #     lenmass = len(mass)
+    #     if len(mass) >0:
+    #         mass = mass[mass >floormass].min()
+    #     else:
+    #         mass = 1e99
+    # else:
         reg = ds.box(ll ,ur)
         if codetp == 'ENZO':
             mass_all = reg[('all','particle_mass')].in_units('Msun')
@@ -6244,7 +6244,7 @@ def pickup_min_dm(ll,ur,codetp,ds,floormass=100):
             mass = mass[mass >floormass].min()
         else:
             mass = 1e99
-    return mass,lenmass
+        return mass,lenmass
 
 def build_hierarchy(centers,radii,hindex,interior,ll_0,ur_0,halo_max=20):
     level = 0
@@ -6742,6 +6742,51 @@ def equisum_partition(arr,p):
     parts = np.split(np.arange(len(arr)),inds)
     return parts
 
+
+def job_organizer2(job_i,Done,len_jobs,or_root=0):
+    rank_now = -1
+    if rank !=or_root:
+        req = comm.isend(rank,tag=12,dest=or_root)
+        req.wait()
+        comm.Recv(Done,tag=20,source=or_root)
+        if not Done[rank]:
+            req = comm.irecv(tag=15,source=or_root)
+            rank_now = req.wait()
+            req = comm.irecv(tag=16,source=or_root)
+            job_i = req.wait()
+            #print(job_i)
+    if rank==or_root:
+        bool_active = np.logical_not(np.isin(np.arange(nprocs),or_root))
+        if Done.sum() == len(Done)-1:
+            Done[or_root] = True
+        else:
+            req = comm.irecv(tag=12,source=MPI.ANY_SOURCE)
+            rank_now = req.wait()
+        if job_i>=len_jobs:
+            Done[rank_now] = True
+            rank_now_i = -1
+        else:
+            rank_now_i = rank_now
+        if not Done[or_root]:
+            req = comm.Send((Done),tag=20,dest=rank_now)
+        #print(Done[bool_active].sum() != len(Done[bool_active]) and not Done[rank_now] and not Done[or_root])
+        if not Done[or_root]:
+            if Done[bool_active].sum() != len(Done[bool_active]) and not Done[rank_now]:
+                req = comm.isend(rank_now_i,tag=15,dest=rank_now)
+                req.wait()
+                req = comm.isend(job_i,tag=16,dest=rank_now)
+                req.wait()
+        #print(rank_now,root_now,job_i,Done)
+        job_i += 1
+    return rank_now,job_i,Done
+
+def job_scheduler_2(out_list,ranklim=1e99):
+    ranks = np.arange(min(nprocs,ranklim)).astype(int)
+    #print(ranks)
+    jobs = {i.item(): [] for i in ranks}
+    sto = {t: {} for t in out_list}
+    return jobs, sto
+
 def job_scheduler(out_list,ranklim=1e99):
     '''
     Function to schedule jobs for each rank. This is the implementation of MPI to run parallel loops. Works with any given list.
@@ -6862,8 +6907,7 @@ def resave_particles(ranklim=3):
         part_dict = {}
     if len(part_dict) ==0:
         interval,timelist = inteval_timelist(skip,fld_list)
-        ranks = np.arange(min(nprocs,ranklim))
-        jobs,sto = job_scheduler(timelist,ranklim=ranklim)
+        jobs,sto = job_scheduler_2(timelist)
         ensure_dir(save_part)
         if refined:
             refined_times = np.array([])
@@ -6883,10 +6927,17 @@ def resave_particles(ranklim=3):
             ll_all,ur_all = np.array(ds_for_resave.domain_left_edge),np.array(ds_for_resave.domain_right_edge)
             del ds_for_resave
         jobs = comm.bcast(jobs,root=0)
-        for rank_now in ranks:
-            if rank == rank_now:
-                for t in jobs[rank]:
-                    if t not in part_dict:
+        job_i = 0
+        Done = np.full(nprocs,False)
+        ranks = np.arange(nprocs)
+        Done[ranks>ranklim] = True
+        while not Done[rank]:
+            rank_now,job_i,Done = job_organizer2(job_i,Done,len(sto))
+            if job_i < len(timelist):
+                t = timelist[job_i]
+                ds,meter = open_ds(t,code)
+            if rank==rank_now:
+                        print(rank,t)
                         numsegs = max(int(2+nprocs**(1/3)),3)
                         xx,yy,zz = np.meshgrid(np.linspace(ll_all[0],ur_all[0],numsegs),\
                                     np.linspace(ll_all[1],ur_all[1],numsegs),np.linspace(ll_all[2],ur_all[2],numsegs))
@@ -6894,18 +6945,17 @@ def resave_particles(ranklim=3):
                         ur = np.concatenate((xx[1:,1:,1:,np.newaxis],yy[1:,1:,1:,np.newaxis],zz[1:,1:,1:,np.newaxis]),axis=3) #ur is upperright
                         ll = np.reshape(ll,(ll.shape[0]*ll.shape[1]*ll.shape[2],3))
                         ur = np.reshape(ur,(ur.shape[0]*ur.shape[1]*ur.shape[2],3))
-                        ds,meter = open_ds(t,code)
                         reg = ds.all_data()
                         if find_dm == True and find_stars == False:
-                            mass,pos,vel,ids = pickup_particles(reg,code, find_dm, find_stars)
+                            mass,pos,vel,ids = pickup_particles(reg,code, stars=find_stars,find_dm=find_dm)
                             bool_reg = (np.sum(pos >= ll_all*meter,axis=1) ==3)*(np.sum(pos < ur_all*meter,axis=1) ==3)
                             mass,pos,vel,ids = mass[bool_reg],pos[bool_reg],vel[bool_reg],ids[bool_reg]
                         elif find_dm == False and find_stars == True:
-                            spos, svel, sids = pickup_particles(reg, code, find_dm, find_stars)
+                            spos, svel, sids = pickup_particles(reg, code,stars=find_stars,find_dm=find_dm)
                             sbool_reg = (np.sum(spos >= ll_all*meter,axis=1) ==3)*(np.sum(spos < ur_all*meter,axis=1) ==3)
                             spos,svel,sids = spos[sbool_reg],svel[sbool_reg],sids[sbool_reg]
                         elif find_dm == True and find_stars == True:
-                            mass,pos,vel,ids,spos,svel,sids = pickup_particles(reg, code, find_dm, find_stars)
+                            mass,pos,vel,ids,spos,svel,sids = pickup_particles(reg, code, stars=find_stars,find_dm=find_dms)
                             bool_reg = (np.sum(pos >= ll_all*meter,axis=1) ==3)*(np.sum(pos < ur_all*meter,axis=1) ==3)
                             mass,pos,vel,ids = mass[bool_reg],pos[bool_reg],vel[bool_reg],ids[bool_reg]
                             sbool_reg = (np.sum(spos >= ll_all*meter,axis=1) ==3)*(np.sum(spos < ur_all*meter,axis=1) ==3)
@@ -6931,11 +6981,21 @@ def resave_particles(ranklim=3):
                         if find_stars == True:
                             spos, svel, sids = 0,0,0
                         reg = 0
-                        ds = 0
-        part_dict = comm.bcast(part_dict,root=0)
+                        jobs[rank_now].append(job_i)
+            ds = 0
+        for rank_i in ranks:
+            jobs[rank_i] = comm.bcast(jobs[rank_i],root=rank_i)
         for rank_now in ranks:
-            for t in jobs[rank_now]:
-                    sto[t] = comm.bcast(sto[t], root=rank_now)
+            for job_i in jobs[rank_now]:
+                t = timelist[job_i]
+                if rank==rank_now:
+                    comm.send(sto[t], dest=0, tag=11)
+                    sto[t] = None
+                if rank==0:
+                    status = MPI.Status()
+                    comm.Probe(source=rank_now, tag=11, status=status)
+                    sto[t] = comm.recv(source=rank_now, tag=11, status=status)
+                #sto[t] = comm.bcast(sto[t], root=rank_now)
         jobs = comm.bcast(jobs,root=0)
         if rank==0 and len(part_dict)==0:
             np.save(save_part+'/part_dict.npy',sto)
@@ -7106,7 +7166,7 @@ if __name__ == "__main__":
         fake = False
         if rank==0:
             print(string,code,savestring,skip)
-        fldn = 2017
+        fldn = 2019
         if fake:
             fldn = 1948
         organize_files = False
@@ -7132,7 +7192,7 @@ if __name__ == "__main__":
         path = string
         find_dm = True
         find_stars = False
-        resave = False # recommended to turn on for particle-based codes (GEAR, GIZMO, CHANGA, GAGDET3) due to potential loading issue with yt
+        resave = True # recommended to turn on for particle-based codes (GEAR, GIZMO, CHANGA, GAGDET3) due to potential loading issue with yt
         last_timestep = len(fld_list) - 1
         if fake:
             find_stars = False
