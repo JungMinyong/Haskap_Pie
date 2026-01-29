@@ -7206,7 +7206,7 @@ if __name__ == "__main__":
         #refined = False
         if not refined:
             resave = False
-        if resave
+        if resave:
             resave_particles()
         Evolve_Tree(plot=False,codetp=code,skip_large=False,verbose=False,\
             from_tree=False,last_timestep=last_timestep,multitree=True,refined=refined,video=False,trackbig=False,tracktime=True)
