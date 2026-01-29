@@ -7204,7 +7204,9 @@ if __name__ == "__main__":
           print('Save iteration: ',fldn)
          #minmass_calc(code)
         #refined = False
-        if resave:
+        if not refined:
+            resave = False
+        if resave
             resave_particles()
         Evolve_Tree(plot=False,codetp=code,skip_large=False,verbose=False,\
             from_tree=False,last_timestep=last_timestep,multitree=True,refined=refined,video=False,trackbig=False,tracktime=True)
