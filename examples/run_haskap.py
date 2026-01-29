@@ -6955,7 +6955,7 @@ def resave_particles(ranklim=3):
                             sbool_reg = (np.sum(spos >= ll_all*meter,axis=1) ==3)*(np.sum(spos < ur_all*meter,axis=1) ==3)
                             spos,svel,sids = spos[sbool_reg],svel[sbool_reg],sids[sbool_reg]
                         elif find_dm == True and find_stars == True:
-                            mass,pos,vel,ids,spos,svel,sids = pickup_particles(reg, code, stars=find_stars,find_dm=find_dms)
+                            mass,pos,vel,ids,spos,svel,sids = pickup_particles(reg, code, stars=find_stars,find_dm=find_dm)
                             bool_reg = (np.sum(pos >= ll_all*meter,axis=1) ==3)*(np.sum(pos < ur_all*meter,axis=1) ==3)
                             mass,pos,vel,ids = mass[bool_reg],pos[bool_reg],vel[bool_reg],ids[bool_reg]
                             sbool_reg = (np.sum(spos >= ll_all*meter,axis=1) ==3)*(np.sum(spos < ur_all*meter,axis=1) ==3)
