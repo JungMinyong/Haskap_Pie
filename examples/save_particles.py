@@ -6,7 +6,7 @@ import gc
 
 sys.path.append(os.path.dirname(__file__))
 import run_haskap as rh
-yt.enable_parallelism()
+rh.yt.enable_parallelism()
 
 def resave_particles_serial():
     skip = rh.skip
@@ -43,23 +43,9 @@ def resave_particles_serial():
         for t in timelist:
             ds, meter = rh.open_ds(t, rh.code)
             print(t)
-            numsegs = max(int(2 + rh.nprocs ** (1 / 3)), 3)
-            xx, yy, zz = np.meshgrid(
-                np.linspace(ll_all[0], ur_all[0], numsegs),
-                np.linspace(ll_all[1], ur_all[1], numsegs),
-                np.linspace(ll_all[2], ur_all[2], numsegs),
-            )
-            ll = np.concatenate(
-                (xx[:-1, :-1, :-1, np.newaxis], yy[:-1, :-1, :-1, np.newaxis], zz[:-1, :-1, :-1, np.newaxis]),
-                axis=3,
-            )
-            ur = np.concatenate(
-                (xx[1:, 1:, 1:, np.newaxis], yy[1:, 1:, 1:, np.newaxis], zz[1:, 1:, 1:, np.newaxis]),
-                axis=3,
-            )
-            ll = np.reshape(ll, (ll.shape[0] * ll.shape[1] * ll.shape[2], 3))
-            ur = np.reshape(ur, (ur.shape[0] * ur.shape[1] * ur.shape[2], 3))
-            reg = ds.all_data()
+            ll = np.array([ll_all])
+            ur = np.array([ur_all])
+            reg = ds.box(ll_all, ur_all)
             if rh.find_dm is True and rh.find_stars is False:
                 mass, pos, vel, ids = rh.pickup_particles(reg, rh.code, stars=rh.find_stars, find_dm=rh.find_dm)
                 bool_reg = (np.sum(pos >= ll_all * meter, axis=1) == 3) * (np.sum(pos < ur_all * meter, axis=1) == 3)
@@ -87,19 +73,23 @@ def resave_particles_serial():
                     if rh.find_stars is True:
                         sbool_in = (np.sum(spos >= ll[v] * meter, axis=1) == 3) * (np.sum(spos < ur[v] * meter, axis=1) == 3)
                         part['spos'], part['svel'], part['sids'] = spos[sbool_in], svel[sbool_in], sids[sbool_in]
-                    np.save(save_part + '/part_%s_%s.npy' % (t, v), part)
+                    #yt.is_root()
+                    if rh.yt.is_root():
+                        np.save(save_part + '/part_%s_%s.npy' % (t, v), part)
                 elif rh.find_dm is False and rh.find_stars is True:
                     part = np.load(save_part + '/part_%s_%s.npy' % (t, v), allow_pickle=True).tolist()
                     sbool_in = (np.sum(spos >= ll[v] * meter, axis=1) == 3) * (np.sum(spos < ur[v] * meter, axis=1) == 3)
                     part['spos'], part['svel'], part['sids'] = spos[sbool_in], svel[sbool_in], sids[sbool_in]
-                    np.save(save_part + '/part_%s_%s.npy' % (t, v), part)
+                    if rh.yt.is_root():
+                        np.save(save_part + '/part_%s_%s.npy' % (t, v), part)
             if rh.find_dm is True:
                 mass, pos, vel, ids = 0, 0, 0, 0
             if rh.find_stars is True:
                 spos, svel, sids = 0, 0, 0
             reg = 0
             ds = 0
-        np.save(save_part + '/part_dict.npy', sto)
+        if rh.yt.is_root():
+            np.save(save_part + '/part_dict.npy', sto)
 
 
 
@@ -199,7 +189,8 @@ def main():
                 'skip': rh.skip,
                 'fldn': rh.fldn,
             }
-            np.save(save_part + '/particle_meta.npy', meta)
+            if rh.yt.is_root():
+                np.save(save_part + '/particle_meta.npy', meta)
         else:
             if rh.rank == 0:
                 print('Missing part_dict.npy; particle metadata not saved.')

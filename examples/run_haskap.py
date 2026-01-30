@@ -44,6 +44,7 @@ nprocs = comm.size
 
 use_saved_particles_only = False
 saved_particle_meta = None
+enzo_type4_only = True
 
 class SavedDS:
     def __init__(self, meta):
@@ -1370,7 +1371,7 @@ class Evolve_Tree():
             #if (len_now%self.interval ==0 or times == max(all_times)) and times >0:
             region_list.append(times)
             if not os.path.exists(savestring + '/' + 'Refined/'+ 'refined_region_%s.npy' % (times)):
-                    fr = Find_Refined(code, fld_list, times, savestring + '/' + 'Refined')
+                    fr = Find_Refined(code, fld_list, times, savestring + '/' + 'Refined', enzo_type4_only=enzo_type4_only)
         region_list = comm.bcast(region_list,root=0)
         region_list.sort()
         region_list = np.array(region_list)
@@ -6745,7 +6746,7 @@ def make_refined():
         if (len_now%interval ==0 or times == last_timestep) and times >0:
             refined_region = None
             if not os.path.exists(savestring + '/' + 'Refined/' + 'refined_region_%s.npy' % (times)):
-                    fr = Find_Refined(code, fld_list, times, savestring + '/' + 'Refined')
+                    fr = Find_Refined(code, fld_list, times, savestring + '/' + 'Refined', enzo_type4_only=enzo_type4_only)
                     refined_region = fr.refined_region
                     # if rank==0:
                     #     #print(refined_region)
