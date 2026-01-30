@@ -1,3 +1,5 @@
+#it is hard-coded in the case of Enzo and particle_type == 4
+
 import os
 import sys
 import numpy as np
@@ -7,6 +9,24 @@ import gc
 sys.path.append(os.path.dirname(__file__))
 import run_haskap as rh
 rh.yt.enable_parallelism()
+
+#in the case of FOGGIE Maelstrom,
+#StaticRefineRegionLeftEdge[3] = 0.4755859375 0.4892578125 0.4809570312
+#StaticRefineRegionRightEdge[3] = 0.529296875 0.5166015625 0.5234375
+box_left_edge = [0.4755859375, 0.4892578125, 0.4809570312]
+box_right_edge = [0.529296875, 0.5166015625, 0.5234375]
+
+
+def _refined_region_enzo_ptype4(reg):
+    part_type = reg[('all', 'particle_type')].v.astype(np.int64)
+    pos = reg[('all', 'particle_position')].to('code_length').v
+    mask = part_type == 4
+    if not np.any(mask):
+        raise ValueError('No ENZO particle_type == 4 particles found for refined region.')
+    pos4 = pos[mask]
+    ll = pos4.min(axis=0)
+    ur = pos4.max(axis=0)
+    return ll, ur
 
 def resave_particles_serial():
     skip = rh.skip
@@ -19,7 +39,11 @@ def resave_particles_serial():
         interval, timelist = rh.inteval_timelist(skip, rh.fld_list)
         sto = {}
         rh.ensure_dir(save_part)
-        if rh.refined:
+        minmass_floor = 100.0
+        minmass_local = np.inf
+        use_enzo_ptype4_refine = rh.refined and rh.code == 'ENZO' and getattr(rh, 'enzo_type4_only', False)
+        ll_all, ur_all = None, None
+        if rh.refined and not use_enzo_ptype4_refine:
             refined_times = np.array([])
             for times in timelist:
                 len_now = len(timelist[timelist >= times])
@@ -35,7 +59,7 @@ def resave_particles_serial():
                 ur_all = np.maximum(ur_all, ur_o)
             buffer = (np.array(ur_all) - np.array(ll_all)) * 0.05
             ll_all, ur_all = np.array(ll_all) - buffer, np.array(ur_all) + buffer
-        else:
+        elif not rh.refined:
             ds_for_resave, _ = rh.open_ds(0, rh.code)
             ll_all = np.array(ds_for_resave.domain_left_edge)
             ur_all = np.array(ds_for_resave.domain_right_edge)
@@ -43,13 +67,29 @@ def resave_particles_serial():
         for t in timelist:
             ds, meter = rh.open_ds(t, rh.code)
             print(t)
+            if use_enzo_ptype4_refine:
+                reg = ds.box(box_left_edge, box_right_edge)
+                ll_ref, ur_ref = _refined_region_enzo_ptype4(reg)
+                if rh.yt.is_root():
+                    np.save(
+                        rh.savestring + '/Refined/' + 'refined_region_%s.npy' % int(t),
+                        np.array([ll_ref, ur_ref]),
+                    )
+                buffer = (ur_ref - ll_ref) * 0.05
+                ll_all, ur_all = ll_ref - buffer, ur_ref + buffer
+            else:
+                reg = ds.box(ll_all, ur_all)
             ll = np.array([ll_all])
             ur = np.array([ur_all])
-            reg = ds.box(ll_all, ur_all)
             if rh.find_dm is True and rh.find_stars is False:
                 mass, pos, vel, ids = rh.pickup_particles(reg, rh.code, stars=rh.find_stars, find_dm=rh.find_dm)
                 bool_reg = (np.sum(pos >= ll_all * meter, axis=1) == 3) * (np.sum(pos < ur_all * meter, axis=1) == 3)
                 mass, pos, vel, ids = mass[bool_reg], pos[bool_reg], vel[bool_reg], ids[bool_reg]
+                kg_to_msun = ds.mass_unit.in_units('Msun').v / ds.mass_unit.in_units('kg').v
+                mass_msun = mass * kg_to_msun
+                mass_msun = mass_msun[mass_msun > minmass_floor]
+                if mass_msun.size > 0:
+                    minmass_local = min(minmass_local, float(mass_msun.min()))
             elif rh.find_dm is False and rh.find_stars is True:
                 spos, svel, sids = rh.pickup_particles(reg, rh.code, stars=rh.find_stars, find_dm=rh.find_dm)
                 sbool_reg = (np.sum(spos >= ll_all * meter, axis=1) == 3) * (np.sum(spos < ur_all * meter, axis=1) == 3)
@@ -60,6 +100,11 @@ def resave_particles_serial():
                 )
                 bool_reg = (np.sum(pos >= ll_all * meter, axis=1) == 3) * (np.sum(pos < ur_all * meter, axis=1) == 3)
                 mass, pos, vel, ids = mass[bool_reg], pos[bool_reg], vel[bool_reg], ids[bool_reg]
+                kg_to_msun = ds.mass_unit.in_units('Msun').v / ds.mass_unit.in_units('kg').v
+                mass_msun = mass * kg_to_msun
+                mass_msun = mass_msun[mass_msun > minmass_floor]
+                if mass_msun.size > 0:
+                    minmass_local = min(minmass_local, float(mass_msun.min()))
                 sbool_reg = (np.sum(spos >= ll_all * meter, axis=1) == 3) * (np.sum(spos < ur_all * meter, axis=1) == 3)
                 spos, svel, sids = spos[sbool_reg], svel[sbool_reg], sids[sbool_reg]
             sto[t] = {}
@@ -90,6 +135,11 @@ def resave_particles_serial():
             ds = 0
         if rh.yt.is_root():
             np.save(save_part + '/part_dict.npy', sto)
+        minmass_global = rh.comm.allreduce(minmass_local, op=rh.MPI.MIN)
+        if not np.isfinite(minmass_global):
+            minmass_global = None
+        return minmass_global
+    return None
 
 
 
@@ -146,9 +196,10 @@ def main():
     else:
         rh.minmass, rh.refined = rh.minmass_calc(code)
         if rh.refined:
-            refined_files = glob.glob(savestring + '/Refined/refined_region_*.npy')
-            if len(refined_files) == 0:
-                rh.make_refined()
+            if not (code == 'ENZO' and getattr(rh, 'enzo_type4_only', False)):
+                refined_files = glob.glob(savestring + '/Refined/refined_region_*.npy')
+                if len(refined_files) == 0:
+                    rh.make_refined()
 
     if rh.rank == 0:
         print('Save iteration: ', rh.fldn)
@@ -157,7 +208,9 @@ def main():
         rh.resave = False
 
     if rh.resave:
-        resave_particles_serial()
+        recomputed_minmass = resave_particles_serial()
+        if recomputed_minmass is not None:
+            rh.minmass = recomputed_minmass
         save_part = savestring + '/particle_save'
         part_dict_path = save_part + '/part_dict.npy'
         if os.path.exists(part_dict_path):

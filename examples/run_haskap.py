@@ -59,13 +59,27 @@ class SavedDS:
         self.omega_lambda = meta['omega_lambda']
 
 def load_saved_particle_meta(save_part=None):
-    global saved_particle_meta
+    global saved_particle_meta, minmass, refined, find_dm, find_stars, skip, fldn
     if save_part is None:
         save_part = savestring + '/particle_save'
     meta_path = save_part + '/particle_meta.npy'
     if not os.path.exists(meta_path):
         raise FileNotFoundError('Missing saved particle metadata: %s' % meta_path)
     saved_particle_meta = np.load(meta_path, allow_pickle=True).tolist()
+    meta_config = saved_particle_meta.get('_config')
+    if meta_config is not None:
+        if meta_config.get('minmass') is not None:
+            minmass = meta_config['minmass']
+        if meta_config.get('refined') is not None:
+            refined = meta_config['refined']
+        if meta_config.get('find_dm') is not None:
+            find_dm = meta_config['find_dm']
+        if meta_config.get('find_stars') is not None:
+            find_stars = meta_config['find_stars']
+        if meta_config.get('skip') is not None:
+            skip = meta_config['skip']
+        if meta_config.get('fldn') is not None:
+            fldn = meta_config['fldn']
     return saved_particle_meta
 
 
@@ -7232,7 +7246,10 @@ if __name__ == "__main__":
             resave = True
             minmass,refined = 21232, True
         else:
-            minmass,refined = minmass_calc(code)
+            if use_saved_particles_only:
+                load_saved_particle_meta()
+            else:
+                minmass,refined = minmass_calc(code)
         if rank==0:
           print('Save iteration: ',fldn)
          #minmass_calc(code)
