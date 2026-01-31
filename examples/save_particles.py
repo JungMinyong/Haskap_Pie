@@ -14,7 +14,8 @@ rh.yt.enable_parallelism()
 #StaticRefineRegionRightEdge[3] = 0.529296875 0.5166015625 0.5234375
 box_left_edge = [0.4755859375, 0.4892578125, 0.4809570312]
 box_right_edge = [0.529296875, 0.5166015625, 0.5234375]
-
+# Hard-code to use particle_type == 4 for refined region
+use_enzo_ptype4_refine = True
 
 def _refined_region_enzo_ptype4(reg):
     part_type = reg[('all', 'particle_type')].v.astype(np.int64)
@@ -40,9 +41,9 @@ def resave_particles_serial():
         rh.ensure_dir(save_part)
         minmass_floor = 100.0
         minmass_local = np.inf
-        use_enzo_ptype4_refine = rh.refined and rh.code == 'ENZO' and getattr(rh, 'enzo_type4_only', False)
         ll_all, ur_all = None, None
         if rh.refined and not use_enzo_ptype4_refine:
+            print("We haven't tested use_enzo_ptype4_refine = False for refined regions.")
             refined_times = np.array([])
             for times in timelist:
                 len_now = len(timelist[timelist >= times])
