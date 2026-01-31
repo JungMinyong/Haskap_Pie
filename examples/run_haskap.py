@@ -42,46 +42,6 @@ comm = MPI.COMM_WORLD
 rank = comm.rank
 nprocs = comm.size
 
-use_saved_particles_only = False
-saved_particle_meta = None
-enzo_type4_only = True
-
-class SavedDS:
-    def __init__(self, meta):
-        self.length_unit = yt.YTQuantity(meta['length_unit_m'], 'm')
-        self.mass_unit = yt.YTQuantity(meta['mass_unit_kg'], 'kg')
-        self.domain_left_edge = yt.YTArray(meta['domain_left_edge_m'], 'm')
-        self.domain_right_edge = yt.YTArray(meta['domain_right_edge_m'], 'm')
-        self.current_time = yt.YTQuantity(meta['current_time_s'], 's')
-        self.current_redshift = meta['current_redshift']
-        self.hubble_constant = meta['hubble_constant']
-        self.omega_matter = meta['omega_matter']
-        self.omega_lambda = meta['omega_lambda']
-
-def load_saved_particle_meta(save_part=None):
-    global saved_particle_meta, minmass, refined, find_dm, find_stars, skip, fldn
-    if save_part is None:
-        save_part = savestring + '/particle_save'
-    meta_path = save_part + '/particle_meta.npy'
-    if not os.path.exists(meta_path):
-        raise FileNotFoundError('Missing saved particle metadata: %s' % meta_path)
-    saved_particle_meta = np.load(meta_path, allow_pickle=True).tolist()
-    meta_config = saved_particle_meta.get('_config')
-    if meta_config is not None:
-        if meta_config.get('minmass') is not None:
-            minmass = meta_config['minmass']
-        if meta_config.get('refined') is not None:
-            refined = meta_config['refined']
-        if meta_config.get('find_dm') is not None:
-            find_dm = meta_config['find_dm']
-        if meta_config.get('find_stars') is not None:
-            find_stars = meta_config['find_stars']
-        if meta_config.get('skip') is not None:
-            skip = meta_config['skip']
-        if meta_config.get('fldn') is not None:
-            fldn = meta_config['fldn']
-    return saved_particle_meta
-
 
 
 
@@ -1385,7 +1345,7 @@ class Evolve_Tree():
             #if (len_now%self.interval ==0 or times == max(all_times)) and times >0:
             region_list.append(times)
             if not os.path.exists(savestring + '/' + 'Refined/'+ 'refined_region_%s.npy' % (times)):
-                    fr = Find_Refined(code, fld_list, times, savestring + '/' + 'Refined', enzo_type4_only=enzo_type4_only)
+                    fr = Find_Refined(code, fld_list, times, savestring + '/' + 'Refined')
         region_list = comm.bcast(region_list,root=0)
         region_list.sort()
         region_list = np.array(region_list)
@@ -5616,13 +5576,6 @@ class Find_KE_PE():
 
 
 def open_ds(timestep,codetp,direction=1,skip=False):
-    if use_saved_particles_only:
-        if saved_particle_meta is None:
-            load_saved_particle_meta()
-        meta = saved_particle_meta[timestep]
-        ds = SavedDS(meta)
-        meter = meta['meter']
-        return ds, meter
     # The conversion factor from code_length to physical unit is not correct in AGORA's GADGET3 and AREPO
     if not organize_files or skip:
         time_sys.sleep(0.02*rank)
@@ -6760,7 +6713,7 @@ def make_refined():
         if (len_now%interval ==0 or times == last_timestep) and times >0:
             refined_region = None
             if not os.path.exists(savestring + '/' + 'Refined/' + 'refined_region_%s.npy' % (times)):
-                    fr = Find_Refined(code, fld_list, times, savestring + '/' + 'Refined', enzo_type4_only=enzo_type4_only)
+                    fr = Find_Refined(code, fld_list, times, savestring + '/' + 'Refined')
                     refined_region = fr.refined_region
                     # if rank==0:
                     #     #print(refined_region)
@@ -7246,8 +7199,14 @@ if __name__ == "__main__":
             resave = True
             minmass,refined = 21232, True
         else:
-            if use_saved_particles_only:
-                load_saved_particle_meta()
+            save_part = savestring + '/particle_save'
+            minmass_file = save_part + '/minmass.npy'
+            if os.path.exists(minmass_file):
+                cfg = np.load(minmass_file, allow_pickle=True).item()
+                minmass = cfg.get('minmass', None)
+                refined = cfg.get('refined', False)
+                if minmass is None:
+                    minmass,refined = minmass_calc(code)
             else:
                 minmass,refined = minmass_calc(code)
         if rank==0:

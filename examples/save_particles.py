@@ -4,7 +4,6 @@ import os
 import sys
 import numpy as np
 import glob
-import gc
 
 sys.path.append(os.path.dirname(__file__))
 import run_haskap as rh
@@ -138,6 +137,8 @@ def resave_particles_serial():
         minmass_global = rh.comm.allreduce(minmass_local, op=rh.MPI.MIN)
         if not np.isfinite(minmass_global):
             minmass_global = None
+        if rh.yt.is_root():
+            np.save(save_part + '/minmass.npy', {'minmass': minmass_global, 'refined': rh.refined})
         return minmass_global
     return None
 
@@ -212,41 +213,9 @@ def main():
         if recomputed_minmass is not None:
             rh.minmass = recomputed_minmass
         save_part = savestring + '/particle_save'
-        part_dict_path = save_part + '/part_dict.npy'
-        if os.path.exists(part_dict_path):
-            part_dict = np.load(part_dict_path, allow_pickle=True).tolist()
-            meta = {}
-            for t in sorted(part_dict.keys()):
-                ds, meter = rh.open_ds(t, code)
-                length_unit_m = ds.length_unit.in_units('m').v
-                meta[t] = {
-                    'current_time_s': ds.current_time.in_units('s').v,
-                    'current_redshift': float(ds.current_redshift),
-                    'domain_left_edge_m': ds.domain_left_edge.in_units('m').v,
-                    'domain_right_edge_m': ds.domain_right_edge.in_units('m').v,
-                    'length_unit_m': length_unit_m,
-                    'mass_unit_kg': ds.mass_unit.in_units('kg').v,
-                    'mass_unit_Msun': ds.mass_unit.in_units('Msun').v,
-                    'hubble_constant': float(ds.hubble_constant),
-                    'omega_matter': float(ds.omega_matter),
-                    'omega_lambda': float(ds.omega_lambda),
-                    'meter': float(meter),
-                }
-                del ds
-                gc.collect()
-            meta['_config'] = {
-                'minmass': rh.minmass,
-                'refined': rh.refined,
-                'find_dm': rh.find_dm,
-                'find_stars': rh.find_stars,
-                'skip': rh.skip,
-                'fldn': rh.fldn,
-            }
-            if rh.yt.is_root():
-                np.save(save_part + '/particle_meta.npy', meta)
-        else:
-            if rh.rank == 0:
-                print('Missing part_dict.npy; particle metadata not saved.')
+        if rh.yt.is_root():
+            rh.ensure_dir(save_part)
+            np.save(save_part + '/minmass.npy', {'minmass': rh.minmass, 'refined': rh.refined})
     else:
         if rh.rank == 0:
             print('Refined region not found; particle save skipped.')
