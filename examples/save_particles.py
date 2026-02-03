@@ -12,8 +12,8 @@ rh.yt.enable_parallelism()
 #in the case of FOGGIE Maelstrom,
 #StaticRefineRegionLeftEdge[3] = 0.4755859375 0.4892578125 0.4809570312
 #StaticRefineRegionRightEdge[3] = 0.529296875 0.5166015625 0.5234375
-box_left_edge = np.array([0.4755859375, 0.4892578125, 0.4809570312])
-box_right_edge = np.array([0.529296875, 0.5166015625, 0.5234375])
+box_left_edge = np.array([0.4, 0.4, 0.4])
+box_right_edge = np.array([0.6, 0.6, 0.6])
 # Hard-code to use particle_type == 4 for refined region
 use_enzo_ptype4_refine = True
 
@@ -69,8 +69,8 @@ def resave_particles_serial():
             print(t)
             if use_enzo_ptype4_refine:
                 reg = ds.box(box_left_edge, box_right_edge)
-                #ll_ref, ur_ref = _refined_region_enzo_ptype4(reg)
-                ll_ref, ur_ref = box_left_edge, box_right_edge
+                ll_ref, ur_ref = _refined_region_enzo_ptype4(reg)
+                #ll_ref, ur_ref = box_left_edge, box_right_edge
                 if rh.yt.is_root():
                     np.save(
                         rh.savestring + '/Refined/' + 'refined_region_%s.npy' % int(t),

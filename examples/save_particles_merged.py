@@ -58,17 +58,20 @@ def merge_snapshot(I, snap_name: str, part_dict: dict):
     pos_all = ds.arr(pos_all[msk_inregion], "code_length").to("m")
     vel_all = ds.arr(vel_all[msk_inregion], "code_velocity").to("m/s")
     min_mass = ds.quan(min_mass, "Msun").to("kg").v #it's float for consistency with the original code
-    mass_all = np.full(len(vel_all), min_mass)
+    
 
-    i_level = 0
-    while i_level < len(level_info):
+    #change it in reverse order
+    i_level = len(level_info) - 1
+    mass_all = np.full(len(vel_all), min_mass * (8 ** i_level))
+
+    while i_level >= 0:
         I_start, I_end = level_info[i_level, 1], level_info[i_level, 2]
         msk_level = ( (pindex_all >= I_start) & (pindex_all <= I_end) )
         if np.sum(msk_level) == 0:
-            break
-        assert pindex_all[msk_level].size == I_end - I_start + 1
+            raise RuntimeError("No particles found in level range, probably no maximum refinement level particles in the region")
+        
         mass_all[msk_level] = min_mass * (8 ** i_level)
-        i_level += 1
+        i_level -= 1
 
 
 
