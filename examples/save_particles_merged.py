@@ -4,7 +4,7 @@ import numpy as np
 import yt
 import os
 
-def merge_snapshot(I, snap_name: str):
+def merge_snapshot(I, snap_name: str, part_dict: dict):
     snap_prefix = Path(snap_name)        # .../DD2035/DD2035
     snap_id     = snap_prefix.name       # DD2035
     files = sorted(IN_DIR.glob(f"{snap_id}_rank*.npz"))
@@ -68,6 +68,10 @@ def merge_snapshot(I, snap_name: str):
     part['pos'], part['mass'], part['vel'], part['ids'] = pos_all, mass_all, vel_all, pindex_all
 
     np.save(OUT_DIR / f'part_{I}_0.npy', part)
+    part_dict[I] = {
+        'll': np.array([ll]),
+        'ur': np.array([ur]),
+    }
     OUT_REFINED_DIR = Path(savestring) / "Refined"
     OUT_REFINED_DIR.mkdir(parents=True, exist_ok=True)
     refined_path = OUT_REFINED_DIR / f'refined_region_{I}.npy'
@@ -103,6 +107,8 @@ if __name__ == "__main__":
     OUT_DIR = Path(savestring) / "particle_save"
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
+    part_dict = {}
     for I, snap_name in enumerate(fld_list):
-        merge_snapshot(I, snap_name)
-
+        merge_snapshot(I, snap_name, part_dict)
+    if part_dict:
+        np.save(OUT_DIR / 'part_dict.npy', part_dict)
