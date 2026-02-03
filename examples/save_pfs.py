@@ -92,6 +92,7 @@ savestring = sys.argv[3]
 skip = int(sys.argv[4])
 print(string,code,savestring,skip)
 fldn = 2019
+os.makedirs(savestring, exist_ok=True)
 
 if not os.path.exists(savestring +  '/pfs_allsnaps_%s.txt' % fldn):
     fld_list = make_pfs_allsnaps(string,savestring,code,index=fldn)
