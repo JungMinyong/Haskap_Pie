@@ -68,7 +68,7 @@ def merge_snapshot(I, snap_name: str, part_dict: dict):
         I_start, I_end = level_info[i_level, 1], level_info[i_level, 2]
         msk_level = ( (pindex_all >= I_start) & (pindex_all <= I_end) )
         if np.sum(msk_level) == 0:
-            raise RuntimeError("No particles found in level range, probably no maximum refinement level particles in the region")
+            print('Warning: No particles found in level ', i_level)
         
         mass_all[msk_level] = min_mass * (8 ** i_level)
         i_level -= 1
