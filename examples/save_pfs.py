@@ -102,8 +102,8 @@ else:
 
 print('Making metadata file...')
 
-savestring +  '/metadata_%s.npy' % fldn
-if not os.path.exists(savestring +  '/metadata_%s.npy' % fldn):
+savestring +  '/metadata_%s.npz' % fldn
+if not os.path.exists(savestring +  '/metadata_%s.npz' % fldn):
     ds = yt.load(np.loadtxt(savestring + '/pfs_allsnaps_%s.txt' % fldn,dtype=str)[0,0])
     ptype = ds.r['all','particle_type'].v
     pmass = ds.r['all','particle_mass'].to("Msun").v
@@ -113,15 +113,29 @@ if not os.path.exists(savestring +  '/metadata_%s.npy' % fldn):
     msk_dm = msk_dm & (pmass >= 0)
     pmass = pmass[msk_dm]
     pid = pid[msk_dm]
+    
     min_mass = np.min(pmass)
+    temp = pmass[(pmass < min_mass * 1.5) & (pmass > min_mass * 0.5)]
+    min_mass = np.median(temp)  # to avoid outlier
 
-    pid_mostrefined = pid[pmass < min_mass * 1.5]
-    idx_start = np.min(pid_mostrefined)
-    idx_end = np.max(pid_mostrefined)
-    assert idx_end - idx_start + 1 == len(pid_mostrefined)
+    level_lst = []
+    level = 0
+    M1 = min_mass
+    
+    while True:
+        pid_mostrefined = pid[(pmass < M1 * 1.5) & (pmass > M1 * 0.5)]
+        if (len(pid_mostrefined) == 0):
+            break
+        idx_start = np.min(pid_mostrefined)
+        idx_end = np.max(pid_mostrefined)
+        assert idx_end - idx_start + 1 == len(pid_mostrefined)
+        level_lst.append((level, idx_start, idx_end))
+        M1 = M1 * 8
+        level += 1
+    level_lst = np.array(level_lst)
     #save idx_start, idx_end, min_mass
-    np.save(savestring +  '/metadata_%s.npy' % fldn, [idx_start, idx_end, min_mass])
+    np.savez(savestring +  '/metadata_%s.npz' % fldn, min_mass = min_mass, level_info = level_lst)
 
 
 else:
-    print('metadata_%s.npy already exists' % fldn)
+    print('metadata_%s.npz already exists' % fldn)

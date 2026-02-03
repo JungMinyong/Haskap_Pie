@@ -32,10 +32,9 @@ def merge_snapshot(I, snap_name: str, part_dict: dict):
     )
     ptype_all = np.concatenate(ptype_all) if ptype_all else np.empty((0,), dtype=np.int64)
 
-    I_start, I_end, min_mass = np.load(savestring +  '/metadata_%s.npy' % fldn)
-    I_start = int(I_start)
-    I_end = int(I_end)
-    min_mass = float(min_mass)
+    metadata = np.load(savestring +  '/metadata_%s.npz' % fldn)
+    level_info = metadata['level_info']
+    min_mass = float(metadata['min_mass'])
 
     msk_ptype4 = (ptype_all == 4)
 
@@ -54,15 +53,24 @@ def merge_snapshot(I, snap_name: str, part_dict: dict):
         (pos_all[:,2] >= ll[2]) & (pos_all[:,2] <= ur[2])
     )
     pindex_all = pindex_all[msk_inregion]
-    if (pindex_all.max() > I_end) | (pindex_all.min() < I_start):
-        print(f"[{snap_name}] WARNING: pindex range check failed.")
-        sys.exit(1)
 
     ds = ts[I]
     pos_all = ds.arr(pos_all[msk_inregion], "code_length").to("m")
     vel_all = ds.arr(vel_all[msk_inregion], "code_velocity").to("m/s")
     min_mass = ds.quan(min_mass, "Msun").to("kg").v #it's float for consistency with the original code
     mass_all = np.full(len(vel_all), min_mass)
+
+    i_level = 0
+    while i_level < len(level_info):
+        I_start, I_end = level_info[i_level, 1], level_info[i_level, 2]
+        msk_level = ( (pindex_all >= I_start) & (pindex_all <= I_end) )
+        if np.sum(msk_level) == 0:
+            break
+        assert pindex_all[msk_level].size == I_end - I_start + 1
+        mass_all[msk_level] = min_mass * (8 ** i_level)
+        i_level += 1
+
+
 
     part = {}
     part['pos'], part['mass'], part['vel'], part['ids'] = pos_all, mass_all, vel_all, pindex_all

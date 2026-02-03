@@ -79,7 +79,7 @@ def process_snapshot(snap_name: str):
                     continue
 
                 ptype = g["particle_type"][...]
-                msk = (ptype == DM_TYPE)
+                msk = (ptype == 4) | (ptype == 1)
                 if not np.any(msk):
                     continue
 

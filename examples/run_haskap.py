@@ -7200,10 +7200,10 @@ if __name__ == "__main__":
             minmass,refined = 21232, True
         else:
             save_part = savestring + '/particle_save'
-            minmass_file = savestring +  '/metadata_%s.npy' % fldn
+            minmass_file = savestring +  '/metadata_%s.npz' % fldn
             
             if os.path.exists(minmass_file):
-                minmass = float(np.load(minmass_file)[2])
+                minmass = float(np.load(minmass_file)['min_mass'])
                 refined = True
                 # cfg = np.load(minmass_file, allow_pickle=True).item()
                 # minmass = cfg.get('minmass', None)
