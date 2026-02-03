@@ -59,9 +59,9 @@ def merge_snapshot(I, snap_name: str, part_dict: dict):
         sys.exit(1)
 
     ds = ts[I]
-    pos_all = ds.arr(pos_all[msk_inregion], "code_length").to("m").v
-    vel_all = ds.arr(vel_all[msk_inregion], "code_velocity").to("m/s").v
-    min_mass = ds.quan(min_mass, "Msun").to("kg").v
+    pos_all = ds.arr(pos_all[msk_inregion], "code_length").to("m")
+    vel_all = ds.arr(vel_all[msk_inregion], "code_velocity").to("m/s")
+    min_mass = ds.quan(min_mass, "Msun").to("kg").v #it's float for consistency with the original code
     mass_all = np.full(len(vel_all), min_mass)
 
     part = {}
