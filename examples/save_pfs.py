@@ -130,11 +130,11 @@ if not os.path.exists(savestring +  '/metadata_%s.npz' % fldn):
         idx_end = np.max(pid_mostrefined)
         level_lst.append((level, idx_start, idx_end))
 
-        if idx_end - idx_start + 1 == len(pid_mostrefined):
+        if not (idx_end - idx_start + 1 == len(pid_mostrefined)):
             if idx_start < 100: #if they are likely to the top level ids. It was 0 in my test, but just in case
                 print('likely top level ids, stop here')
                 break
-            raise RuntimeError("Unexpected: contiguous ids but not matching length")
+            raise RuntimeError(f"Unexpected: some particle ids are missing, level = {level}, idx_start = {idx_start}, idx_end = {idx_end}, number of particles = {len(pid_mostrefined)}")
         
         M1 = M1 * 8
         level += 1
