@@ -4,6 +4,8 @@ import numpy as np
 import yt
 import os
 
+mode = 'normal' # 'normal' or 'fixed_box'
+
 def merge_snapshot(I, snap_name: str, part_dict: dict):
     snap_prefix = Path(snap_name)        # .../DD2035/DD2035
     snap_id     = snap_prefix.name       # DD2035
@@ -40,12 +42,21 @@ def merge_snapshot(I, snap_name: str, part_dict: dict):
 
     #pos_temp = pos_all[msk_mostrefined]
     #identify region encompassing ptype==4
-    pos_temp = pos_all[msk_ptype4]
-    ll = np.min(pos_temp,axis=0)
-    ur = np.max(pos_temp,axis=0)
-    buffer = 0.05 * (ur - ll)
-    ll = ll - buffer
-    ur = ur + buffer
+    if mode == 'normal':
+        pos_temp = pos_all[msk_ptype4]
+        ll = np.min(pos_temp,axis=0)
+        ur = np.max(pos_temp,axis=0)
+        buffer = 0.05 * (ur - ll)
+        ll = ll - buffer
+        ur = ur + buffer
+
+    elif mode == 'fixed_box':
+        # for Maelstrom
+        ll = [0.465, 0.495, 0.495]
+        ur = [0.475, 0.505, 0.505]
+    else:
+        raise ValueError(f"Invalid mode: {mode}")
+        
 
     msk_inregion = (
         (pos_all[:,0] >= ll[0]) & (pos_all[:,0] <= ur[0]) &
