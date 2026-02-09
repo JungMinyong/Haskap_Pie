@@ -5,11 +5,13 @@ import yt
 import os
 
 mode = 'normal' # 'normal' or 'fixed_box'
+delete_temp_files = False
 
 def merge_snapshot(I, snap_name: str, part_dict: dict):
     snap_prefix = Path(snap_name)        # .../DD2035/DD2035
     snap_id     = snap_prefix.name       # DD2035
-    files = sorted(IN_DIR.glob(f"{snap_id}_rank*.npz"))
+    temp_dir = snap_prefix.parent / "temp_particles"
+    files = sorted(temp_dir.glob(f"{snap_id}_rank*.npz"))
 
     if not files:
         print(f"[{snap_name}] WARNING: no rank files found")
@@ -21,11 +23,11 @@ def merge_snapshot(I, snap_name: str, part_dict: dict):
     ptype_all = []
 
     for f in files:
-        d = np.load(f)
-        pos_all.append(d["pos"])
-        vel_all.append(d["vel"])
-        pindex_all.append(d["pindex"])
-        ptype_all.append(d["ptype"])
+        with np.load(f) as d:
+            pos_all.append(d["pos"])
+            vel_all.append(d["vel"])
+            pindex_all.append(d["pindex"])
+            ptype_all.append(d["ptype"])
 
     pos_all = np.concatenate(pos_all) if pos_all else np.empty((0, 3))
     vel_all = np.concatenate(vel_all) if vel_all else np.empty((0, 3))
@@ -107,25 +109,37 @@ def merge_snapshot(I, snap_name: str, part_dict: dict):
         f"pos={pos_all.shape}, vel={vel_all.shape}, pindex={pindex_all.shape}"
     )
 
+    if delete_temp_files:
+        for f in files:
+            f.unlink(missing_ok=True)
+        try:
+            temp_dir.rmdir()
+        except OSError:
+            pass
+
 
 
 
 if __name__ == "__main__":
-    if len(sys.argv) !=5:
+    if len(sys.argv) not in (5, 6):
         print(sys.argv)
-        print('Need simulation file path and code type to run as well as whether to pre-run refined region, ex: python shinbad.py simulation/folder/path ENZO save/path skip_number')
+        print(
+            "Need simulation file path and code type to run as well as whether to pre-run refined region, "
+            "ex: python shinbad.py simulation/folder/path ENZO save/path skip_number [delete_temp_files:0|1]"
+        )
         sys.exit(1)
 
     string = sys.argv[1]
     code = sys.argv[2]
     savestring = sys.argv[3]
     skip = int(sys.argv[4])
+    if len(sys.argv) == 6:
+        delete_temp_files = bool(int(sys.argv[5]))
     print(string,code,savestring,skip)
     fldn = 2019
 
     fld_list = np.loadtxt(savestring + '/pfs_allsnaps_%s.txt' % fldn,dtype=str)[:,0]
     ts = yt.DatasetSeries(fld_list)
-    IN_DIR  = Path(savestring) / "resave_splited"
     OUT_DIR = Path(savestring) / "particle_save"
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 

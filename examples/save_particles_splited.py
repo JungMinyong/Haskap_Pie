@@ -31,10 +31,6 @@ if skip != 1:
 fld_list = np.loadtxt(savestring + '/pfs_allsnaps_%s.txt' % fldn,dtype=str)[:,0]
 #this give [/mnt/home/mjung/ceph/foggie_snaps/DD2035/DD2035, ...]
 
-# --------- user config ----------
-OUT_DIR  = Path(savestring) / 'resave_splited'  # put outputs somewhere
-OUT_DIR.mkdir(parents=True, exist_ok=True)
-
 DM_TYPE = 4
 
 # snapshot range
@@ -50,6 +46,8 @@ def iter_cpu_files(snap_prefix: Path):
 def process_snapshot(snap_name: str):
     snap_prefix = Path(snap_name)        # .../DD2035/DD2035
     snap_id     = snap_prefix.name       # DD2035
+    temp_dir = snap_prefix.parent / "temp_particles"
+    temp_dir.mkdir(parents=True, exist_ok=True)
 
     cpu_files = iter_cpu_files(snap_prefix)
 
@@ -102,7 +100,7 @@ def process_snapshot(snap_name: str):
     pindex_local = np.concatenate(pindex_local) if pindex_local else np.empty((0,), dtype=np.int64)
     ptype_local = np.concatenate(ptype_local) if ptype_local else np.empty((0,), dtype=np.int64)
 
-    out_path = OUT_DIR / f"{snap_id}_rank{rank:03d}.npz"
+    out_path = temp_dir / f"{snap_id}_rank{rank:03d}.npz"
     np.savez(out_path, pos=pos_local, vel=vel_local, pindex=pindex_local, ptype=ptype_local)
 
     print(f"[rank {rank:03d}] {snap_id}: N={len(pindex_local)}  time={time.time()-t0:.2f}s")
