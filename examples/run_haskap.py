@@ -359,7 +359,7 @@ class Evolve_Tree():
                         #self.halotree = comm.bcast(self.halotree,root=0)
                         self.send_halotree()
                         self.make_active_list(backlook=self.direction)
-                        del self.ds
+                        #del self.ds
                     # Plots the halos for creating videos
                     if video and 1==2:
                         if len_now%(int(1*self.interval)) == 2:
