@@ -56,6 +56,11 @@ def merge_snapshot(I, snap_name: str, part_dict: dict):
         # for Maelstrom
         ll = [0.465, 0.495, 0.495]
         ur = [0.475, 0.505, 0.505]
+    elif mode == 'Squall':
+        from get_foggie_center import get_foggie_center
+        center_temp = get_foggie_center(mode, snap_id)
+        ur = [center_temp[0] + 0.05, center_temp[1] + 0.05, center_temp[2] + 0.05]
+        ll = [center_temp[0] - 0.05, center_temp[1] - 0.05, center_temp[2] - 0.05]
     else:
         raise ValueError(f"Invalid mode: {mode}")
         

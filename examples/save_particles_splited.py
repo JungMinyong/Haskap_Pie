@@ -34,9 +34,6 @@ fld_list = np.loadtxt(savestring + '/pfs_allsnaps_%s.txt' % fldn,dtype=str)[:,0]
 
 DM_TYPE = 4
 
-# snapshot range
-RD_START = 2035
-RD_END   = 2056  # inclusive
 
 def iter_cpu_files(snap_prefix: Path):
     # snap_prefix: .../DD2035/DD2035
