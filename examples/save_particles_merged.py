@@ -10,7 +10,7 @@ delete_temp_files = False
 def merge_snapshot(I, snap_name: str, part_dict: dict):
     snap_prefix = Path(snap_name)        # .../DD2035/DD2035
     snap_id     = snap_prefix.name       # DD2035
-    temp_dir = snap_prefix.parent / "temp_particles"
+    temp_dir = Path(tempstring) #snap_prefix.parent / "temp_particles"
     files = sorted(temp_dir.glob(f"{snap_id}_rank*.npz"))
 
     if not files:
@@ -133,8 +133,9 @@ if __name__ == "__main__":
     code = sys.argv[2]
     savestring = sys.argv[3]
     skip = int(sys.argv[4])
-    if len(sys.argv) == 6:
-        delete_temp_files = bool(int(sys.argv[5]))
+    tempstring = sys.argv[5]
+    if len(sys.argv) == 7:
+        delete_temp_files = bool(int(sys.argv[6]))
     print(string,code,savestring,skip)
     fldn = 2019
 

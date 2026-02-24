@@ -21,6 +21,7 @@ string = sys.argv[1]
 code = sys.argv[2]
 savestring = sys.argv[3]
 skip = int(sys.argv[4])
+tempstring = sys.argv[5]
 print(string,code,savestring,skip)
 fldn = 2019
 
@@ -46,7 +47,7 @@ def iter_cpu_files(snap_prefix: Path):
 def process_snapshot(snap_name: str):
     snap_prefix = Path(snap_name)        # .../DD2035/DD2035
     snap_id     = snap_prefix.name       # DD2035
-    temp_dir = snap_prefix.parent / "temp_particles"
+    temp_dir = Path(tempstring) #/ "temp_particles"
     temp_dir.mkdir(parents=True, exist_ok=True)
 
     cpu_files = iter_cpu_files(snap_prefix)
