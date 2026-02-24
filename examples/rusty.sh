@@ -32,7 +32,7 @@ TEMPDIR=/mnt/home/mjung/ceph/temp
 MODE=normal
 
 python save_pfs.py $SNAPDIR $CODETYPE $SAVEDIR $SKIP
-srun python save_particles_splited.py $SNAPDIR $CODETYPE $SAVEDIR $SKIP
+srun python save_particles_splited.py $SNAPDIR $CODETYPE $SAVEDIR $SKIP $TEMPDIR
 python save_particles_merged.py $SNAPDIR $CODETYPE $SAVEDIR $SKIP $TEMPDIR $MODE
 srun -n 16 python run_haskap.py $SNAPDIR $CODETYPE $SAVEDIR $SKIP
 
