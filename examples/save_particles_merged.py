@@ -125,7 +125,7 @@ def merge_snapshot(I, snap_name: str, part_dict: dict):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) not in (5, 6):
+    if len(sys.argv) not in (7, 8):
         print(sys.argv)
         print(
             "Need simulation file path and code type to run as well as whether to pre-run refined region, "

@@ -12,7 +12,7 @@ nranks = int(os.environ.get("SLURM_NTASKS", 1))
 print(f"[rank {rank:03d}] starting up, total ranks = {nranks}")
 
 
-if len(sys.argv) !=5:
+if len(sys.argv) !=6:
     print(sys.argv)
     print('Need simulation file path and code type to run as well as whether to pre-run refined region, ex: python shinbad.py simulation/folder/path ENZO save/path skip_number')
     sys.exit(1)
