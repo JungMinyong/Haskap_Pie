@@ -4,7 +4,6 @@ import numpy as np
 import yt
 import os
 
-mode = 'normal' # 'normal' or 'fixed_box'
 delete_temp_files = False
 
 def merge_snapshot(I, snap_name: str, part_dict: dict):
@@ -139,8 +138,9 @@ if __name__ == "__main__":
     savestring = sys.argv[3]
     skip = int(sys.argv[4])
     tempstring = sys.argv[5]
-    if len(sys.argv) == 7:
-        delete_temp_files = bool(int(sys.argv[6]))
+    mode = sys.argv[6]
+    if len(sys.argv) == 8:
+        delete_temp_files = bool(int(sys.argv[7]))
     print(string,code,savestring,skip)
     fldn = 2019
 
