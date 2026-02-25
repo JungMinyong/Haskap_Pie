@@ -32,9 +32,8 @@ def get_foggie_center(
         raise ValueError(f"{snapname} not found in metadata.")
     row = row.iloc[0]
 
-    row = get_trackbox_position('Squall', 2200)
     center = np.array(row[['x_c', 'y_c', 'z_c']])
     redshift = row['redshift']
     center_unitary = (center * (1 + redshift)) / L    
-    return row
+    return center_unitary
 
