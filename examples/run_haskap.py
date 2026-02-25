@@ -7084,7 +7084,7 @@ def add_virial_mass(cdenl,mden,more_variables_i):
 def make_var_names():
     var_names_scalar = ['d_com_coh','d_com_coe','d_com_cohe','com_r','coe_r',\
         'coh_r','sphericity','ellip_mass_frac','hull_volume','ellipse_volume',\
-        'Total_Particles','spin','bound_mass','cden_rad']
+        'Total_Particles','spin','vdisp','bound_mass','cden_rad']
     var_names_vec = ['a','b','c','j','hull_energy_center','hull_mass_center']
     return var_names_scalar,var_names_vec
 
@@ -7100,6 +7100,8 @@ def more_var_maker(pos,mass,vel,rvir,esr,es,estep_f,hull,com2,self_lu,self_kg_su
     J = np.sum(np.cross(mass[esr<estep_f][:,np.newaxis]*(pos[esr<estep_f]-com2),vel[esr<estep_f]-meanv),axis=0)
     j = J/mass[esr<estep_f].sum()
     spin = (np.linalg.norm(J)*abs((mass[esr<estep_f]*es[esr<estep_f]).sum())**(1/2))/(6.6743e-11*mass[esr<estep_f].sum()**(5/2))
+    vel_residual = vel[esr<estep_f] - meanv
+    vdisp = np.sqrt((mass[esr<estep_f]*np.sum(vel_residual**2,axis=1)).sum()/mass[esr<estep_f].sum())/self_lu
     #print(spin)
     weighted_pos = pos[esr<estep_f]
     fweights = 2*mass[esr<estep_f]*self_kg_sun/minmass
@@ -7145,7 +7147,7 @@ def more_var_maker(pos,mass,vel,rvir,esr,es,estep_f,hull,com2,self_lu,self_kg_su
     c_vec *= axis_factor*c/a
     bound_mass = mass[esr<0].sum()*self_kg_sun
     more_variables_i = [dist_com_3,dist_com_1,dist_com_2,com_r/self_lu,coe_r/self_lu,half_width/self_lu,sphericity,1-mass_frac,\
-            volume_hull,volume_ellpise,total_particles,spin,bound_mass,rvir_cden/self_lu]
+            volume_hull,volume_ellpise,total_particles,spin,vdisp,bound_mass,rvir_cden/self_lu]
     more_variables_vec = [a_vec,b_vec,c_vec,j,center_of_energy/self_lu,center_of_mass/self_lu]
     #print(more_variables_i)
     return more_variables_i,more_variables_vec
